@@ -5,6 +5,11 @@
  */
 package com.app.controller;
 
+import com.app.dao.SuperBean;
+import com.app.dbconnection.HiveDBConnection;
+import com.app.hive.HiveCRUD;
+import java.sql.Connection;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
@@ -35,7 +40,14 @@ public class BookController {
     @RequestMapping(value = "/add", method = RequestMethod.POST)
     public String add(@ModelAttribute("bookdao") BookDao beanObj, HttpServletRequest request, HttpServletResponse response, Model model) {
         try {
-
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            boolean flag = master.saveRecord(con, beanObj);
+            if (flag) {
+                model.addAttribute("status", "success");
+            } else {
+                model.addAttribute("status", "failed");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -43,9 +55,30 @@ public class BookController {
     }
 
     @RequestMapping(value = "/initSearch", method = RequestMethod.GET)
-    public String initSearch(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public String initSearch(HttpServletRequest request, @ModelAttribute("bookdao") BookDao beanObj, HttpServletResponse response, Model model) {
         try {
-            model.addAttribute("bookdao", new BookDao());
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            List<SuperBean> record = master.listRecord(con);
+            model.addAttribute("bookdao", beanObj);
+            model.addAttribute("records", record);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        request.getSession().setAttribute("body", "/books/searchbooks.jsp");
+        return "common";
+    }
+
+    @RequestMapping(value = "/search", method = RequestMethod.GET)
+    public String search(HttpServletRequest request, @ModelAttribute("bookdao") BookDao beanObj, HttpServletResponse response, Model model) {
+        try {
+
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            List<SuperBean> record = master.listRecordByName(con, beanObj.getName());
+            model.addAttribute("bookdao", beanObj);
+            model.addAttribute("records", record);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -59,7 +92,10 @@ public class BookController {
 
         try {
             String recid = (String) request.getParameter("recid");
-            model.addAttribute("language", new BookDao());
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            BookDao bookdao = (BookDao) master.initUpdate(con, new Integer(recid));
+            model.addAttribute("bookdao", bookdao);
             model.addAttribute("action", "update.htm");
             model.addAttribute("mode", "update");
         } catch (Exception e) {
@@ -74,6 +110,14 @@ public class BookController {
 
         String forward = "redirect:/book/initSearch.htm";
         try {
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            boolean flag = master.updateRecord(con, beanObj);
+            if (flag) {
+                model.addAttribute("status", "success");
+            } else {
+                model.addAttribute("status", "failed");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,7 +135,11 @@ public class BookController {
     public String delete(HttpServletRequest request, HttpServletResponse response, Model model) {
 
         try {
+
             String recid = (String) request.getParameter("recid");
+            Connection con = HiveDBConnection.getConnection();
+            HiveCRUD master = new HiveCRUD();
+            boolean flag = master.deleteRecord(con, new Integer(recid));
 
         } catch (Exception e) {
             e.printStackTrace();
